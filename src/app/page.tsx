@@ -1,66 +1,75 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+import { getAuthUser } from '@/lib/firebase/auth'
+import { adminDb } from '@/lib/firebase/server'
+import { redirect } from 'next/navigation'
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
 
-export default function Home() {
+export default async function Home() {
+  const user = await getAuthUser()
+
+  if (!user) {
+    // Landing Page
+    return (
+      <div className="min-h-screen bg-[#FAF8F6] flex flex-col items-center justify-center p-6 text-center">
+        <h1 className="text-4xl font-serif text-[#1A1A1A] mb-4">N.o.N</h1>
+        <p className="text-[#6B6460] mb-8 max-w-md">
+          Share exactly one authentic photo per day.
+          <br />
+          No filters. No endless scrolling. Just now.
+        </p>
+        <div className="flex gap-4">
+          <Button asChild className="rounded-full w-32">
+            <Link href="/login">Login</Link>
+          </Button>
+          <Button asChild variant="outline" className="rounded-full w-32">
+            <Link href="/signup">Sign Up</Link>
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  // --- Authenticated User Logic ---
+
+  // Check if user has an active post
+  const now = new Date().toISOString()
+  const postsSnap = await adminDb.collection('posts')
+    .where('user_id', '==', user.uid)
+    .where('expires_at', '>', now)
+    .limit(1)
+    .get()
+
+  const hasActivePost = !postsSnap.empty
+
+  if (hasActivePost) {
+    redirect('/feed')
+  }
+
+  // Show "Today's Moment" screen (Camera Entry)
+  const date = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.tsx file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen bg-[#FAF8F6] flex flex-col items-center justify-center p-6 text-center">
+      <div className="space-y-6 max-w-md w-full">
+        <div className="space-y-2">
+          <h1 className="text-4xl font-serif text-[#1A1A1A]">{date}</h1>
+          <p className="text-[#6B6460]">You haven&apos;t posted your moment yet.</p>
         </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <div className="py-8">
+          <div className="w-64 h-64 mx-auto bg-[#F5F1ED] rounded-full flex items-center justify-center border-2 border-dashed border-[#9C8B7E]">
+            <span className="text-4xl">📸</span>
+          </div>
         </div>
-      </main>
+
+        <Button asChild className="w-full h-14 text-lg rounded-full bg-[#1A1A1A] text-white hover:bg-[#1A1A1A]/90">
+          <Link href="/camera">Capture Moment</Link>
+        </Button>
+
+        <p className="text-sm text-[#9C8B7E] pt-4">
+          You&apos;ll have 2 minutes to capture your authentic self.
+        </p>
+      </div>
     </div>
-  );
+  )
 }
