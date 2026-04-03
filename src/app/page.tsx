@@ -32,14 +32,18 @@ export default async function Home() {
   // --- Authenticated User Logic ---
 
   // Check if user has an active post
-  const now = new Date().toISOString()
-  const postsSnap = await adminDb.collection('posts')
-    .where('user_id', '==', user.uid)
-    .where('expires_at', '>', now)
-    .limit(1)
-    .get()
-
-  const hasActivePost = !postsSnap.empty
+  let postsSnap = null
+  try {
+    const now = new Date().toISOString()
+    postsSnap = await adminDb.collection('posts')
+      .where('user_id', '==', user.uid)
+      .where('expires_at', '>', now)
+      .limit(1)
+      .get()
+  } catch (e) {
+    console.error('Posts query failed:', e)
+  }
+  const hasActivePost = postsSnap ? !postsSnap.empty : false
 
   if (hasActivePost) {
     redirect('/feed')
