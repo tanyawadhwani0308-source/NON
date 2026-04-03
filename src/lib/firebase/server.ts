@@ -9,14 +9,18 @@ if (!admin.apps.length) {
         try {
             const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
             credential = admin.credential.cert(serviceAccount);
+            console.log('Firebase Admin init SUCCESS. project_id:', serviceAccount.project_id);
         } catch (error) {
-            console.error('Error parsing FIREBASE_SERVICE_ACCOUNT_KEY', error);
+            console.error('CRITICAL: Error parsing FIREBASE_SERVICE_ACCOUNT_KEY', error);
+            throw error;
         }
+    } else {
+        console.error('CRITICAL: FIREBASE_SERVICE_ACCOUNT_KEY is missing');
     }
 
     try {
         admin.initializeApp({
-            credential: credential || admin.credential.applicationDefault(),
+            credential: credential,
             storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
             projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
         });
