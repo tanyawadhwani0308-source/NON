@@ -3,7 +3,11 @@
 import React from 'react'
 import { Calendar, TrendingUp } from 'lucide-react'
 
-export function RightPanel() {
+interface RightPanelProps {
+    streak: number
+}
+
+export function RightPanel({ streak }: RightPanelProps) {
     return (
         <div className="h-full py-8 px-6 flex flex-col gap-8">
             {/* Section 1: Quote / Motto */}
@@ -16,11 +20,11 @@ export function RightPanel() {
                 </div>
             </div>
 
-            {/* Section 2: Streak Mini-Widget */}
+            {/* Section 2: Real Streak */}
             <div className="space-y-2">
                 <h3 className="text-[10px] uppercase tracking-[0.15em] text-[#8C847F] font-bold">Activity</h3>
                 <div className="p-5 bg-[#3E3835] rounded-[20px] shadow-lg text-white relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300">
-                    {/* Glow effect */}
+                    {/* Glow */}
                     <div className="absolute top-0 right-0 w-20 h-20 bg-[#C6A87C] blur-[40px] opacity-20 group-hover:opacity-30 transition-opacity" />
 
                     <div className="flex items-center gap-3 mb-3">
@@ -28,13 +32,25 @@ export function RightPanel() {
                         <span className="text-sm font-medium">Current Streak</span>
                     </div>
                     <div className="flex items-baseline gap-1">
-                        <span className="text-4xl font-serif">12</span>
-                        <span className="text-sm text-white/60">days</span>
+                        <span className="text-4xl font-serif">{streak}</span>
+                        <span className="text-sm text-white/60">{streak === 1 ? 'day' : 'days'}</span>
                     </div>
+
+                    {streak === 0 && (
+                        <p className="text-white/40 text-xs mt-2">Post today to start your streak!</p>
+                    )}
+                    {streak > 0 && (
+                        <p className="text-[#C6A87C]/80 text-xs mt-2">
+                            {streak >= 14 ? '🏆 Fortnight legend!' :
+                             streak >= 7  ? '⚡ Week strong!' :
+                             streak >= 3  ? '🔥 On a roll!' :
+                                           'Keep it going!'}
+                        </p>
+                    )}
                 </div>
             </div>
 
-            {/* Section 3: Placeholder / Calendar */}
+            {/* Section 3: Memory Lane placeholder */}
             <div className="flex-1 bg-white/40 rounded-[20px] border border-[#3E3835]/5 p-5 flex flex-col items-center justify-center text-center space-y-3">
                 <Calendar className="w-8 h-8 text-[#DCCFC2]" />
                 <p className="text-xs text-[#8C847F]">Coming soon:<br />Memory Lane</p>

@@ -10,39 +10,45 @@ export default async function FeedPage() {
     const now = new Date().toISOString();
 
     // 1. Check if user posted today
-    const userPostsSnap = await adminDb.collection('posts')
-        .where('user_id', '==', user.uid)
-        .where('expires_at', '>', now)
-        .limit(1)
-        .get();
-
-    const hasPosted = !userPostsSnap.empty;
+    let hasPosted = false;
+    try {
+        const userPostsSnap = await adminDb.collection('posts')
+            .where('user_id', '==', user!.uid)
+            .where('expires_at', '>', now)
+            .limit(1)
+            .get();
+        hasPosted = !userPostsSnap.empty;
+    } catch (e) {
+        console.error('Failed to check user post status:', e);
+    }
 
     if (!hasPosted) {
         return <LockedFeed />;
     }
 
     // 2. Fetch Feed (Friends' posts)
-    // Simplified logic: Fetch all active posts not from self
-    // In a real app: query where user_id in [friendIds] (array-contains or chunked 'in' queries)
-    const feedPostsSnap = await adminDb.collection('posts')
-        .where('expires_at', '>', now)
-        .orderBy('expires_at', 'asc') // Required for inequality filters
-        .orderBy('created_at', 'desc')
-        .get();
+    let feedPosts: any[] = [];
+    try {
+        const feedPostsSnap = await adminDb.collection('posts')
+            .where('expires_at', '>', now)
+            .orderBy('expires_at', 'asc')
+            .orderBy('created_at', 'desc')
+            .get();
 
-    // Filter out user's own posts manually for simplicity, then attach user metadata
-    const feedPostsDocs = feedPostsSnap.docs.filter(doc => doc.data().user_id !== user.uid);
+        const feedPostsDocs = feedPostsSnap.docs.filter(doc => doc.data().user_id !== user!.uid);
 
-    const feedPosts = await Promise.all(feedPostsDocs.map(async (doc) => {
-        const postData = doc.data();
-        const userDoc = await adminDb.collection('users').doc(postData.user_id).get();
-        return {
-            id: doc.id,
-            ...postData,
-            user: userDoc.data() || {}
-        };
-    }));
+        feedPosts = await Promise.all(feedPostsDocs.map(async (doc) => {
+            const postData = doc.data();
+            try {
+                const userDoc = await adminDb.collection('users').doc(postData.user_id).get();
+                return { id: doc.id, ...postData, user: userDoc.data() || {} };
+            } catch {
+                return { id: doc.id, ...postData, user: {} };
+            }
+        }));
+    } catch (e) {
+        console.error('Failed to fetch feed posts:', e);
+    }
 
     return (
         <div className="space-y-8 animate-in fade-in">
@@ -58,8 +64,8 @@ export default async function FeedPage() {
                         <div key={post.id} className="bg-white rounded-[24px] overflow-hidden shadow-sm border border-[#E5E5E5]">
                             {/* Header */}
                             <div className="p-4 flex items-center gap-3 border-b border-[#F5F1ED]">
-                                <div className="h-10 w-10 bg-[#E5E5E5] rounded-full flex items-center justify-center text-xs font-medium text-[#6B6460]">
-                                    {post.user?.username?.[0] || '?'}
+                                <div className="h-10 w-10 bg-[#E5E5E5] rounded-full flex items-center justify-center text-lg font-medium text-[#6B6460]">
+                                    {post.user?.avatar || post.user?.username?.[0]?.toUpperCase() || '?'}
                                 </div>
                                 <div>
                                     <p className="font-medium text-[#3E3835]">{post.user?.username}</p>

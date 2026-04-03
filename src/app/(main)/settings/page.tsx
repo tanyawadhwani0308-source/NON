@@ -17,31 +17,37 @@ export default function SettingsPage() {
         setMessage(null)
 
         const formData = new FormData(e.currentTarget)
-        const username = formData.get('username') as string
+        const username = (formData.get('username') as string)?.trim()
+
+        if (!username || username.length < 3) {
+            setMessage({ type: 'error', text: 'Username must be at least 3 characters' })
+            setLoading(false)
+            return
+        }
 
         try {
-            // Need to hit a custom API route for client-side Firebase profile updates 
-            // OR we can just use the Server Action we wrote, but standard in Nextjs 15
-            // is passing the form to the server action. Let's try to stick to the server action we have:
-            const { updateProfile } = await import('./actions')
-            const res = await updateProfile(formData)
+            const res = await fetch('/api/profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username }),
+            })
 
-            if (res?.error) {
-                setMessage({ type: 'error', text: res.error })
-            } else if (res?.success) {
-                setMessage({ type: 'success', text: res.success })
-                // Reset form
+            const data = await res.json()
+
+            if (!res.ok || data.error) {
+                setMessage({ type: 'error', text: data.error || 'Failed to update username' })
+            } else {
+                setMessage({ type: 'success', text: 'Username updated successfully!' })
                 e.currentTarget.reset()
             }
         } catch (err) {
-            setMessage({ type: 'error', text: 'Failed to update' })
+            setMessage({ type: 'error', text: 'Network error. Please try again.' })
         } finally {
             setLoading(false)
         }
     }
 
     async function handleLogout() {
-        // Hit our custom API route to clear the httpOnly session cookie
         await fetch('/auth/signout', { method: 'POST' })
         router.push('/login')
     }
@@ -69,16 +75,22 @@ export default function SettingsPage() {
                             placeholder="Enter new username"
                             className="bg-[#FAF8F6] border-0 h-12 rounded-xl"
                         />
+                        <p className="text-xs text-[#8C847F]">Letters, numbers and underscores only. Min. 3 characters.</p>
                     </div>
 
                     {message && (
-                        <p className={`text-sm ${message.type === 'error' ? 'text-red-500' : 'text-green-500'}`}>
-                            {message.text}
+                        <p className={`text-sm ${message.type === 'error' ? 'text-red-500' : 'text-green-600'}`}>
+                            {message.type === 'success' ? '✓ ' : ''}{message.text}
                         </p>
                     )}
 
                     <div className="pt-2">
-                        <Button disabled={loading} type="submit" className="w-full bg-[#3E3835] hover:bg-[#2A2522] text-white">
+                        <Button
+                            disabled={loading}
+                            type="submit"
+                            className="w-full bg-[#3E3835] hover:bg-[#2A2522] text-white"
+                        >
+                            <Save className="w-4 h-4 mr-2" />
                             {loading ? 'Saving...' : 'Save Changes'}
                         </Button>
                     </div>

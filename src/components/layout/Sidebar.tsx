@@ -2,17 +2,21 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Camera, User, Users, Settings, LogOut, ChevronRight } from 'lucide-react'
+import { Home, Camera, User, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-export function Sidebar() {
+interface SidebarProps {
+    username?: string
+    avatar?: string
+}
+
+export function Sidebar({ username, avatar }: SidebarProps) {
     const pathname = usePathname()
 
     const navItems = [
         { name: 'Feed', href: '/feed', icon: Home },
         { name: 'Camera', href: '/camera', icon: Camera },
         { name: 'Profile', href: '/profile', icon: User },
-        // { name: 'Friends', href: '/friends', icon: Users },
         { name: 'Settings', href: '/settings', icon: Settings },
     ]
 
@@ -58,18 +62,29 @@ export function Sidebar() {
                 })}
             </div>
 
-            {/* Footer / User Info with "Glass" styling */}
+            {/* Footer / User Info */}
             <div className="mt-auto pt-6 border-t border-[#3E3835]/5">
-                <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/60 transition-colors cursor-pointer group">
-                    <div className="h-9 w-9 rounded-full bg-[#C6A87C] flex items-center justify-center text-white text-xs font-serif shadow-sm group-hover:scale-105 transition-transform">
-                        ME
+                <Link
+                    href="/profile"
+                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/60 transition-colors cursor-pointer group"
+                >
+                    {/* Avatar circle — emoji or initial */}
+                    <div className="h-9 w-9 rounded-full bg-[#C6A87C]/20 border border-[#C6A87C]/30 flex items-center justify-center text-lg shadow-sm group-hover:scale-105 transition-transform flex-shrink-0">
+                        {avatar ? (
+                            <span>{avatar}</span>
+                        ) : (
+                            <span className="text-xs font-bold text-[#C6A87C]">
+                                {username ? username[0].toUpperCase() : 'ME'}
+                            </span>
+                        )}
                     </div>
                     <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-[#3E3835] truncate leading-tight">My Account</p>
-                        <p className="text-[10px] text-[#8C847F] truncate">Pro Member</p>
+                        <p className="text-sm font-medium text-[#3E3835] truncate leading-tight">
+                            {username || 'My Account'}
+                        </p>
+                        <p className="text-[10px] text-[#8C847F] truncate">View Profile</p>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-[#8C847F] group-hover:translate-x-1 transition-transform" />
-                </div>
+                </Link>
             </div>
         </nav>
     )

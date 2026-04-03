@@ -14,23 +14,33 @@ export async function updateProfile(formData: FormData) {
 
     const username = formData.get('username') as string
 
-    if (!username || username.length < 3) {
+    if (!username || username.trim().length < 3) {
         return { error: 'Username must be at least 3 characters' }
     }
 
+    const trimmedUsername = username.trim()
+
+    // Validate format: alphanumeric + underscores only
+    if (!/^[a-zA-Z0-9_]+$/.test(trimmedUsername)) {
+        return { error: 'Username can only contain letters, numbers, and underscores' }
+    }
+
     try {
-        await adminDb.collection('users').doc(user.uid).update({ username })
+        // Use set with merge:true so it works whether or not the document/field exists yet
+        await adminDb.collection('users').doc(user.uid).set(
+            { username: trimmedUsername },
+            { merge: true }
+        )
     } catch (error) {
-        return { error: 'Failed to update profile. Username might be taken.' }
+        console.error('Failed to update username:', error)
+        return { error: 'Failed to save username. Please try again.' }
     }
 
     revalidatePath('/profile')
     revalidatePath('/settings')
-    return { success: 'Profile updated successfully' }
+    return { success: 'Username updated successfully!' }
 }
 
 export async function signOut() {
-    // Instead of using Supabase signout directly, 
-    // we redirect to the specialized NEXT.js API route that deletes the Firebase HTTPOnly session cookie.
     redirect('/auth/signout')
 }

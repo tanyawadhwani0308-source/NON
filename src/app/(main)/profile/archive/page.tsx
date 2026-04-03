@@ -10,12 +10,16 @@ export default async function ArchivePage() {
 
     if (!user) redirect('/login')
 
-    const snapshot = await adminDb.collection('posts')
-        .where('user_id', '==', user.uid)
-        .orderBy('created_at', 'desc')
-        .get()
-
-    const posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+    let posts: any[] = []
+    try {
+        const snapshot = await adminDb.collection('posts')
+            .where('user_id', '==', user!.uid)
+            .orderBy('created_at', 'desc')
+            .get()
+        posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+    } catch (e) {
+        console.error('Failed to fetch archive posts:', e)
+    }
 
     return (
         <div className="min-h-screen bg-[#FAF8F6] pb-20">

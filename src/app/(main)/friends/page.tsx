@@ -12,49 +12,56 @@ export default async function FriendsPage() {
     if (!user) redirect('/login');
 
     // 1. Get Pending Requests (Received)
-    const requestsSnapshot = await adminDb.collection('friendships')
-        .where('friend_id', '==', user.uid)
-        .where('status', '==', 'pending')
-        .get();
+    let receivedRequests: any[] = [];
+    try {
+        const requestsSnapshot = await adminDb.collection('friendships')
+            .where('friend_id', '==', user!.uid)
+            .where('status', '==', 'pending')
+            .get();
 
-    const receivedRequests = await Promise.all(requestsSnapshot.docs.map(async (doc) => {
-        const data = doc.data();
-        const userDoc = await adminDb.collection('users').doc(data.user_id).get();
-        return {
-            id: doc.id,
-            ...data,
-            profiles: userDoc.data() || {}
-        };
-    }));
-
-    // 2. Get Friends (Accepted)
-    // Firestore requires querying both directions separately due to lack of OR across fields with different indexes easily.
-    const friends1Snap = await adminDb.collection('friendships')
-        .where('user_id', '==', user.uid)
-        .where('status', '==', 'accepted')
-        .get();
-
-    const friends2Snap = await adminDb.collection('friendships')
-        .where('friend_id', '==', user.uid)
-        .where('status', '==', 'accepted')
-        .get();
-
-    const resolveFriends = async (docs: any[], friendField: string) => {
-        return Promise.all(docs.map(async (doc) => {
+        receivedRequests = await Promise.all(requestsSnapshot.docs.map(async (doc) => {
             const data = doc.data();
-            const friendId = data[friendField];
-            const userDoc = await adminDb.collection('users').doc(friendId).get();
-            return {
-                id: doc.id,
-                ...data,
-                profile: userDoc.data() || {}
-            };
+            try {
+                const userDoc = await adminDb.collection('users').doc(data.user_id).get();
+                return { id: doc.id, ...data, profiles: userDoc.data() || {} };
+            } catch {
+                return { id: doc.id, ...data, profiles: {} };
+            }
         }));
-    };
+    } catch (e) {
+        console.error('Failed to fetch friend requests:', e);
+    }
 
-    const friends1 = await resolveFriends(friends1Snap.docs, 'friend_id');
-    const friends2 = await resolveFriends(friends2Snap.docs, 'user_id');
-    const friends = [...friends1, ...friends2];
+    // 2. Get Friends (Accepted) — query both directions
+    let friends: any[] = [];
+    try {
+        const resolveFriends = async (docs: any[], friendField: string) => {
+            return Promise.all(docs.map(async (doc) => {
+                const data = doc.data();
+                const friendId = data[friendField];
+                try {
+                    const userDoc = await adminDb.collection('users').doc(friendId).get();
+                    return { id: doc.id, ...data, profile: userDoc.data() || {} };
+                } catch {
+                    return { id: doc.id, ...data, profile: {} };
+                }
+            }));
+        };
+
+        const [friends1Snap, friends2Snap] = await Promise.all([
+            adminDb.collection('friendships').where('user_id', '==', user!.uid).where('status', '==', 'accepted').get(),
+            adminDb.collection('friendships').where('friend_id', '==', user!.uid).where('status', '==', 'accepted').get(),
+        ]);
+
+        const [friends1, friends2] = await Promise.all([
+            resolveFriends(friends1Snap.docs, 'friend_id'),
+            resolveFriends(friends2Snap.docs, 'user_id'),
+        ]);
+
+        friends = [...friends1, ...friends2];
+    } catch (e) {
+        console.error('Failed to fetch friends:', e);
+    }
 
     return (
         <div className="min-h-screen bg-[#FAF8F6] pb-20">
@@ -82,7 +89,6 @@ export default async function FriendsPage() {
                                 <div key={req.id} className="flex items-center justify-between p-3 bg-white rounded-xl shadow-sm">
                                     <div className="flex items-center gap-3">
                                         <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden">
-                                            {/* Avatar */}
                                             <div className="h-full w-full bg-[#9C8B7E] flex items-center justify-center text-white text-xs">
                                                 {req.profiles.username?.[0]?.toUpperCase()}
                                             </div>
